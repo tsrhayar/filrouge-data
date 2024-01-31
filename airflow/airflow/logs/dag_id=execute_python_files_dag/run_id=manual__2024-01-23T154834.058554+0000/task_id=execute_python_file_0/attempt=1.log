@@ -1,0 +1,14 @@
+[2024-01-23T15:48:43.504+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: execute_python_files_dag.execute_python_file_0 manual__2024-01-23T15:48:34.058554+00:00 [queued]>
+[2024-01-23T15:48:43.517+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: execute_python_files_dag.execute_python_file_0 manual__2024-01-23T15:48:34.058554+00:00 [queued]>
+[2024-01-23T15:48:43.518+0000] {taskinstance.py:2170} INFO - Starting attempt 1 of 1
+[2024-01-23T15:48:43.642+0000] {taskinstance.py:2191} INFO - Executing <Task(PythonOperator): execute_python_file_0> on 2024-01-23 15:48:34.058554+00:00
+[2024-01-23T15:48:43.645+0000] {standard_task_runner.py:60} INFO - Started process 240 to run task
+[2024-01-23T15:48:43.647+0000] {standard_task_runner.py:87} INFO - Running: ['airflow', 'tasks', 'run', 'execute_python_files_dag', 'execute_python_file_0', 'manual__2024-01-23T15:48:34.058554+00:00', '--job-id', '12', '--raw', '--subdir', 'DAGS_FOLDER/etl_dag.py', '--cfg-path', '/tmp/tmpsl1q49uy']
+[2024-01-23T15:48:43.650+0000] {standard_task_runner.py:88} INFO - Job 12: Subtask execute_python_file_0
+[2024-01-23T15:48:43.850+0000] {task_command.py:423} INFO - Running <TaskInstance: execute_python_files_dag.execute_python_file_0 manual__2024-01-23T15:48:34.058554+00:00 [running]> on host b977193ffa62
+[2024-01-23T15:48:44.262+0000] {taskinstance.py:2480} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='airflow' AIRFLOW_CTX_DAG_ID='execute_python_files_dag' AIRFLOW_CTX_TASK_ID='execute_python_file_0' AIRFLOW_CTX_EXECUTION_DATE='2024-01-23T15:48:34.058554+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2024-01-23T15:48:34.058554+00:00'
+[2024-01-23T15:48:44.264+0000] {logging_mixin.py:188} INFO - Error executing file C:\Users\havet\Desktop\workflow_1\extract.py: [Errno 2] No such file or directory: 'C:\\Users\\havet\\Desktop\\workflow_1\\extract.py'
+[2024-01-23T15:48:44.264+0000] {python.py:201} INFO - Done. Returned value was: None
+[2024-01-23T15:48:44.275+0000] {taskinstance.py:1138} INFO - Marking task as SUCCESS. dag_id=execute_python_files_dag, task_id=execute_python_file_0, execution_date=20240123T154834, start_date=20240123T154843, end_date=20240123T154844
+[2024-01-23T15:48:44.666+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 0
+[2024-01-23T15:48:44.830+0000] {taskinstance.py:3280} INFO - 1 downstream tasks scheduled from follow-on schedule check
