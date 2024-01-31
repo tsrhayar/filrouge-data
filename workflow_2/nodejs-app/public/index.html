@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Visualization</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+    />
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.24.0/axios.min.js"></script> -->
+    <!-- Include Chart.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-3 border" style="max-height: 300px; overflow-y: auto">
+          <h2>Statistiques de Chiffre d'Affaires</h2>
+          <hr />
+          <div id="total-revenue"></div>
+          <hr />
+          <div id="revenue-by-month"></div>
+          <hr />
+          <div id="revenue-by-category"></div>
+        </div>
+        <div class="col-3 border">
+          <canvas id="categorySalesChart" width="400" height="400"></canvas>
+        </div>
+        <div class="col-3 border">
+          <canvas id="salesByYearChart" width="400" height="400"></canvas>
+        </div>
+        <div class="col-3 border">
+          <canvas id="bottomProductSalesChart" width="400" height="400"></canvas>
+        </div>
+        <div class="col-3 border">
+          <canvas id="productSalesChart" width="400" height="400"></canvas>
+        </div>
+        <div class="col-3 border">
+          <canvas id="userTypeDistributionChart" width="400" height="400"></canvas>
+        </div>
+        <div class="col-3 border">
+          <canvas id="genderChart" width="400" height="400"></canvas>
+        </div>
+        <div class="col-3 border">
+          <canvas id="monthlySalesChart" width="400" height="400"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+    fetch("/data")
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
+            return response.json();
+        })
+        .then((data) => {
+            const suspiciousUsers = [];
+
+            // Create a map to store total purchases of each product by each user
+            const userTotalPurchases = new Map();
+
+            // Iterate over the data to populate the userTotalPurchases map
+            data.forEach((sale) => {
+                const userId = sale.name; // Assuming name is unique user identifier
+                const productId = sale.product_name;
+                const purchaseCount = sale.quantity;
+
+                // Initialize user's total purchase count if not already present
+                if (!userTotalPurchases.has(userId)) {
+                    userTotalPurchases.set(userId, new Map());
+                }
+
+                // Increment product purchase count for the user
+                const productPurchases = userTotalPurchases.get(userId);
+                productPurchases.set(productId, (productPurchases.get(productId) || 0) + purchaseCount);
+            });
+
+            // Check for suspicious users who purchased the same product more than 20 times
+            userTotalPurchases.forEach((productMap, userId) => {
+                productMap.forEach((purchaseCount, productId) => {
+                    if (purchaseCount > 10) {
+                        suspiciousUsers.push({
+                            userId: userId,
+                            productId: productId,
+                            totalPurchaseCount: purchaseCount
+                        });
+                    }
+                });
+            });
+
+            // Output suspicious users to console
+            console.log("Suspicious Users:", suspiciousUsers);
+        })
+        .catch((error) => {
+            console.error("Error fetching data:", error);
+        });
+});
+
+    </script>
+
+    <!-- <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        fetch("/data")
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            const suspiciousUsers = [];
+
+            // Create a map to store user purchases by product and month
+            const userPurchases = new Map();
+
+            // Iterate over the data to populate the userPurchases map
+            data.forEach((sale) => {
+              const userId = sale.name; // Assuming name is unique user identifier
+              const productId = sale.product_name;
+              const monthYear = sale.date_purchase.date.slice(0, 7); // Extract month and year in YYYY-MM format
+
+              // Initialize user purchase count if not already present
+              if (!userPurchases.has(userId)) {
+                userPurchases.set(userId, new Map());
+              }
+
+              // Initialize product purchase count for the user if not already present
+              if (!userPurchases.get(userId).has(productId)) {
+                userPurchases.get(userId).set(productId, new Map());
+              }
+
+              // Increment product purchase count for the user for the specific month
+              const purchaseCount = userPurchases.get(userId).get(productId).get(monthYear) || 0;
+              userPurchases
+                .get(userId)
+                .get(productId)
+                .set(monthYear, purchaseCount + sale.quantity);
+            });
+
+            // Check for suspicious users who purchased the same product more than 10 times in a month
+            userPurchases.forEach((productMap, userId) => {
+              productMap.forEach((monthMap, productId) => {
+                monthMap.forEach((purchaseCount, monthYear) => {
+                  if (purchaseCount > 9) {
+                    suspiciousUsers.push({
+                      userId: userId,
+                      productId: productId,
+                      monthYear: monthYear,
+                      purchaseCount: purchaseCount,
+                    });
+                  }
+                });
+              });
+            });
+
+            // Output suspicious users to console
+            console.log("Suspicious Users:", suspiciousUsers);
+          })
+          .catch((error) => {
+            console.error("Error fetching data:", error);
+          });
+      });
+    </script> -->
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        fetch("/data")
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            // Calcul du chiffre d'affaires total
+            const totalRevenue = data.reduce((acc, item) => acc + item.price * item.quantity, 0);
+
+            // Calcul du chiffre d'affaires par mois
+            const revenueByMonth = {};
+            data.forEach((item) => {
+              const monthYear = item.date_purchase.date.slice(0, 7); // Extrait le mois et l'année au format YYYY-MM
+              if (revenueByMonth[monthYear]) {
+                revenueByMonth[monthYear] += item.price * item.quantity;
+              } else {
+                revenueByMonth[monthYear] = item.price * item.quantity;
+              }
+            });
+
+            // Trier les mois par chiffre d'affaires décroissant
+            const sortedMonths = Object.entries(revenueByMonth).sort((a, b) => b[1] - a[1]);
+
+            // Calcul du chiffre d'affaires par catégorie de produits
+            const revenueByCategory = {};
+            data.forEach((item) => {
+              const category = item.category;
+              if (revenueByCategory[category]) {
+                revenueByCategory[category] += item.price * item.quantity;
+              } else {
+                revenueByCategory[category] = item.price * item.quantity;
+              }
+            });
+
+            // Trier les catégories par chiffre d'affaires décroissant
+            const sortedCategories = Object.entries(revenueByCategory).sort((a, b) => b[1] - a[1]);
+
+            // Affichage des statistiques triées dans le DOM
+            const totalRevenueElement = document.getElementById("total-revenue");
+            totalRevenueElement.innerText = "Chiffre d'affaires total : " + totalRevenue + " $";
+
+            const revenueByMonthElement = document.getElementById("revenue-by-month");
+            revenueByMonthElement.innerHTML = "Chiffre d'affaires par mois :";
+            sortedMonths.forEach(([month, revenue]) => {
+              revenueByMonthElement.innerHTML += `<p>${month}: ${revenue} $</p>`;
+            });
+
+            const revenueByCategoryElement = document.getElementById("revenue-by-category");
+            revenueByCategoryElement.innerHTML = "Chiffre d'affaires par catégorie de produits :";
+            sortedCategories.forEach(([category, revenue]) => {
+              revenueByCategoryElement.innerHTML += `<p>${category}: ${revenue} $</p>`;
+            });
+          })
+          .catch((error) => {
+            console.error("Error fetching data:", error);
+          });
+      });
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        fetch("/data")
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            // Calcul du chiffre d'affaires total
+            const totalRevenue = data.reduce((acc, item) => acc + item.price * item.quantity, 0);
+
+            // Calcul du chiffre d'affaires par mois
+            const revenueByMonth = {};
+            data.forEach((item) => {
+              const monthYear = item.date_purchase.date.slice(0, 7); // Extrait le mois et l'année au format YYYY-MM
+              if (revenueByMonth[monthYear]) {
+                revenueByMonth[monthYear] += item.price * item.quantity;
+              } else {
+                revenueByMonth[monthYear] = item.price * item.quantity;
+              }
+            });
+
+            // Calcul du chiffre d'affaires par catégorie de produits
+            const revenueByCategory = {};
+            data.forEach((item) => {
+              const category = item.category;
+              if (revenueByCategory[category]) {
+                revenueByCategory[category] += item.price * item.quantity;
+              } else {
+                revenueByCategory[category] = item.price * item.quantity;
+              }
+            });
+
+            // Affichage des statistiques
+            console.log("Chiffre d'affaires total :", totalRevenue);
+            console.log("Chiffre d'affaires par mois :", revenueByMonth);
+            console.log("Chiffre d'affaires par catégorie de produits :", revenueByCategory);
+          })
+          .catch((error) => {
+            console.error("Error fetching data:", error);
+          });
+      });
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        fetch("/data")
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            // Aggregate user type distribution
+            const userTypeDistribution = {};
+            data.forEach((item) => {
+              const userType = item.user_source_type;
+
+              if (userTypeDistribution[userType]) {
+                userTypeDistribution[userType]++;
+              } else {
+                userTypeDistribution[userType] = 1;
+              }
+            });
+
+            // Extract labels (user types) and counts
+            const labels = Object.keys(userTypeDistribution);
+            const counts = Object.values(userTypeDistribution);
+
+            // Create a chart
+            const ctx = document.getElementById("userTypeDistributionChart").getContext("2d");
+            const userTypeDistributionChart = new Chart(ctx, {
+              type: "pie",
+              data: {
+                labels: labels,
+                datasets: [
+                  {
+                    label: "User Type Distribution",
+                    data: counts,
+                    backgroundColor: [
+                      "rgba(255, 99, 132, 0.6)",
+                      "rgba(54, 162, 235, 0.6)",
+                      "rgba(255, 206, 86, 0.6)",
+                      "rgba(75, 192, 192, 0.6)",
+                      "rgba(153, 102, 255, 0.6)",
+                      "rgba(255, 159, 64, 0.6)",
+                    ],
+                  },
+                ],
+              },
+              options: {
+                title: {
+                  display: true,
+                  text: "User Type Distribution",
+                },
+              },
+            });
+          })
+          .catch((error) => {
+            console.error("Error fetching data:", error);
+          });
+      });
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        fetch("/data")
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            // Aggregate sales data by year
+            const salesByYear = {};
+            data.forEach((item) => {
+              const year = new Date(item.date_purchase.date).getFullYear();
+
+              if (salesByYear[year]) {
+                salesByYear[year]++;
+              } else {
+                salesByYear[year] = 1;
+              }
+            });
+
+            // Extract labels (years) and sales counts
+            const labels = Object.keys(salesByYear);
+            const salesCounts = Object.values(salesByYear);
+
+            // Create a chart
+            const ctx = document.getElementById("salesByYearChart").getContext("2d");
+            const salesByYearChart = new Chart(ctx, {
+              type: "bar",
+              data: {
+                labels: labels,
+                datasets: [
+                  {
+                    label: "Number of Sales",
+                    data: salesCounts,
+                    backgroundColor: "rgba(75, 192, 192, 0.6)",
+                  },
+                ],
+              },
+              options: {
+                title: {
+                  display: true,
+                  text: "Number of Sales per Year",
+                },
+                scales: {
+                  yAxes: [
+                    {
+                      ticks: {
+                        beginAtZero: true,
+                        stepSize: 1,
+                      },
+                    },
+                  ],
+                },
+              },
+            });
+          })
+          .catch((error) => {
+            console.error("Error fetching data:", error);
+          });
+      });
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        fetch("/data")
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            // Aggregate sales data by product
+            const productSalesData = {};
+            data.forEach((item) => {
+              const productName = item.product_name;
+
+              if (productSalesData[productName]) {
+                productSalesData[productName] += item.quantity;
+              } else {
+                productSalesData[productName] = item.quantity;
+              }
+            });
+
+            // Sort products by number of sales (ascending order)
+            const sortedProducts = Object.keys(productSalesData).sort(
+              (a, b) => productSalesData[a] - productSalesData[b]
+            );
+            const bottomProducts = sortedProducts.slice(0, 10); // Get bottom 10 products
+
+            // Extract labels (products) and sales counts
+            const labels = bottomProducts;
+            const salesCounts = bottomProducts.map((product) => productSalesData[product]);
+
+            // Create a chart
+            const ctx = document.getElementById("bottomProductSalesChart").getContext("2d");
+            const bottomProductSalesChart = new Chart(ctx, {
+              type: "bar",
+              data: {
+                labels: labels,
+                datasets: [
+                  {
+                    label: "Number of Sales",
+                    data: salesCounts,
+                    backgroundColor: "rgba(255, 99, 132, 0.6)",
+                  },
+                ],
+              },
+              options: {
+                title: {
+                  display: true,
+                  text: "Bottom 10 Products by Sales",
+                },
+                scales: {
+                  yAxes: [
+                    {
+                      ticks: {
+                        beginAtZero: true,
+                        stepSize: 1,
+                      },
+                    },
+                  ],
+                },
+              },
+            });
+          })
+          .catch((error) => {
+            console.error("Error fetching data:", error);
+          });
+      });
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        fetch("/data")
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            // Aggregate sales data by product
+            const productSalesData = {};
+            data.forEach((item) => {
+              const productName = item.product_name;
+
+              if (productSalesData[productName]) {
+                productSalesData[productName] += item.quantity;
+              } else {
+                productSalesData[productName] = item.quantity;
+              }
+            });
+
+            // Sort products by number of sales
+            const sortedProducts = Object.keys(productSalesData).sort(
+              (a, b) => productSalesData[b] - productSalesData[a]
+            );
+            const topProducts = sortedProducts.slice(0, 10); // Get top 10 products
+
+            // Extract labels (products) and sales counts
+            const labels = topProducts;
+            const salesCounts = topProducts.map((product) => productSalesData[product]);
+
+            // Create a chart
+            const ctx = document.getElementById("productSalesChart").getContext("2d");
+            const productSalesChart = new Chart(ctx, {
+              type: "bar",
+              data: {
+                labels: labels,
+                datasets: [
+                  {
+                    label: "Number of Sales",
+                    data: salesCounts,
+                    backgroundColor: "rgba(75, 192, 192, 0.6)",
+                  },
+                ],
+              },
+              options: {
+                title: {
+                  display: true,
+                  text: "Top 10 Products by Sales",
+                },
+                scales: {
+                  yAxes: [
+                    {
+                      ticks: {
+                        beginAtZero: true,
+                        stepSize: 1,
+                      },
+                    },
+                  ],
+                },
+              },
+            });
+          })
+          .catch((error) => {
+            console.error("Error fetching data:", error);
+          });
+      });
+    </script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        fetch("/data")
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            // Aggregate sales data by category
+            const categorySalesData = {};
+            data.forEach((item) => {
+              const category = item.category;
+
+              if (categorySalesData[category]) {
+                categorySalesData[category]++;
+              } else {
+                categorySalesData[category] = 1;
+              }
+            });
+
+            // Sort categories by number of sales
+            const sortedCategories = Object.keys(categorySalesData).sort(
+              (a, b) => categorySalesData[b] - categorySalesData[a]
+            );
+            const topCategories = sortedCategories.slice(0, 5); // Get top 5 categories
+
+            // Extract labels (categories) and sales counts
+            const labels = topCategories;
+            const salesCounts = topCategories.map((category) => categorySalesData[category]);
+
+            // Create a chart
+            const ctx = document.getElementById("categorySalesChart").getContext("2d");
+            const categorySalesChart = new Chart(ctx, {
+              type: "bar",
+              data: {
+                labels: labels,
+                datasets: [
+                  {
+                    label: "Number of Sales",
+                    data: salesCounts,
+                    backgroundColor: "rgba(75, 192, 192, 0.6)",
+                  },
+                ],
+              },
+              options: {
+                title: {
+                  display: true,
+                  text: "Best Categories by Number of Sales",
+                },
+                scales: {
+                  yAxes: [
+                    {
+                      ticks: {
+                        beginAtZero: true,
+                        stepSize: 1,
+                      },
+                    },
+                  ],
+                },
+              },
+            });
+          })
+          .catch((error) => {
+            console.error("Error fetching data:", error);
+          });
+      });
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        fetch("/data")
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            // Aggregate sales data by month
+            const monthlySalesData = {};
+            data.forEach((item) => {
+              const date = new Date(item.date_purchase.date);
+              const yearMonth =
+                date.getFullYear() + "-" + (date.getMonth() + 1).toString().padStart(2, "0"); // Format: YYYY-MM
+
+              if (monthlySalesData[yearMonth]) {
+                monthlySalesData[yearMonth] += item.price * item.quantity;
+              } else {
+                monthlySalesData[yearMonth] = item.price * item.quantity;
+              }
+            });
+
+            // Extract labels (months) and sales values and sort by year-month
+            const sortedMonths = Object.keys(monthlySalesData).sort();
+            const sortedSalesValues = sortedMonths.map((month) => monthlySalesData[month]);
+
+            // Create a chart
+            const ctx = document.getElementById("monthlySalesChart").getContext("2d");
+            const monthlySalesChart = new Chart(ctx, {
+              type: "line",
+              data: {
+                labels: sortedMonths,
+                datasets: [
+                  {
+                    label: "Sales Per Month",
+                    data: sortedSalesValues,
+                    borderColor: "rgba(75, 192, 192, 1)",
+                    borderWidth: 2,
+                    fill: false,
+                  },
+                ],
+              },
+              options: {
+                title: {
+                  display: true,
+                  text: "Monthly Sales",
+                },
+                scales: {
+                  yAxes: [
+                    {
+                      scaleLabel: {
+                        display: true,
+                        labelString: "Sales Amount",
+                      },
+                    },
+                  ],
+                  xAxes: [
+                    {
+                      scaleLabel: {
+                        display: true,
+                        labelString: "Month",
+                      },
+                    },
+                  ],
+                },
+              },
+            });
+          })
+          .catch((error) => {
+            console.error("Error fetching data:", error);
+          });
+      });
+    </script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        fetch("/data")
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            // Count the occurrences of each gender
+            const genderCounts = {};
+            data.forEach((item) => {
+              if (item.gender in genderCounts) {
+                genderCounts[item.gender]++;
+              } else {
+                genderCounts[item.gender] = 1;
+              }
+            });
+
+            // Extract labels (genders) and counts
+            const labels = Object.keys(genderCounts);
+            const counts = Object.values(genderCounts);
+
+            // Create a chart
+            const ctx = document.getElementById("genderChart").getContext("2d");
+            const genderChart = new Chart(ctx, {
+              type: "pie",
+              data: {
+                labels: labels,
+                datasets: [
+                  {
+                    data: counts,
+                    backgroundColor: ["#ff9999", "#66b3ff", "#99ff99"], // You can customize colors as per your preference
+                  },
+                ],
+              },
+              options: {
+                title: {
+                  display: true,
+                  text: "Gender Distribution",
+                },
+              },
+            });
+          })
+          .catch((error) => {
+            console.error("Error fetching data:", error);
+          });
+      });
+    </script>
+  </body>
+</html>
